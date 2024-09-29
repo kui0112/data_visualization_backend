@@ -1,0 +1,15 @@
+[Unit]
+Description=data_visualization backend.
+After=network.target
+
+[Service]
+ExecStart=/root/data_visualization/venv/bin/python /root/data_visualization/src/main.py WARN
+WorkingDirectory=/root/data_visualization/src/
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=root
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
