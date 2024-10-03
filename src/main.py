@@ -1,7 +1,7 @@
 import asyncio
 import json
-import sys
 
+import click
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,9 +11,18 @@ import uvicorn
 from object_service import ObjectService
 from connection_manager import ConnectionManager, Connection
 from log import logger_factory
+from config import Config
 from utils import Res
 
 logger = logger_factory.get_logger(__name__)
+
+service = ObjectService("static/objects")
+manager = ConnectionManager()
+
+cfg = Config()
+store = {
+    "current_object_name": "显卡"
+}
 
 app = FastAPI()
 
@@ -25,13 +34,6 @@ app.add_middleware(
     allow_headers=["*"]
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-service = ObjectService("static/objects")
-manager = ConnectionManager()
-
-store = {
-    "current_object_name": "苹果"
-}
 
 
 @app.middleware("http")
@@ -114,9 +116,15 @@ async def websocket_endpoint(ws: WebSocket):
             await manager.disconnect(conn)
 
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        log_level = sys.argv[1]
-        logger_factory.set_level(log_level)
+@click.command()
+@click.option('--config', default='config.json', help='Path to the configuration file (default: config.json).')
+def main(config: str):
+    cfg.parse(config)
+    logger_factory.set_level(cfg.log_level)
+    service.set_base_directory(cfg.static_objects_directory)
 
     uvicorn.run(app, host="0.0.0.0", port=9999)
+
+
+if __name__ == '__main__':
+    main()

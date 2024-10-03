@@ -16,8 +16,15 @@ class ObjectService:
         self.object_names: Set[str] = set()
         self.object_alias: Dict[str, List[str]] = dict()
 
-        self.kg_service = KnowledgeGraphService()
+        self.knowledge_graph_service = KnowledgeGraphService()
 
+        self._scan()
+
+    def set_base_directory(self, base_directory: str):
+        self.base_directory = base_directory
+        self.object_paths: Dict[str, List[str]] = dict()
+        self.object_names: Set[str] = set()
+        self.object_alias: Dict[str, List[str]] = dict()
         self._scan()
 
     def _scan(self):
@@ -44,7 +51,7 @@ class ObjectService:
         res = list(filter(lambda x: str.endswith(x, "kg.json"), files))
         if res:
             file = f"{object_path}/{res[0]}"
-            return self.kg_service.get_graph_data(name, file)
+            return self.knowledge_graph_service.get_graph_data(name, file)
         return None
 
     def get_image_urls(self, name: str):
@@ -65,6 +72,7 @@ class ObjectService:
 
     def get_images_and_subtitles(self, name: str):
         object_path = random.choice(self.object_paths[name])
+        print(object_path)
         path = f"{object_path}/images"
         files = os.listdir(path)
         subtitle_files: List[str] = list(filter(lambda x: re.match(r"\d+\.txt", x), files))
@@ -73,18 +81,27 @@ class ObjectService:
         for subtitle_file in subtitle_files:
             segment_id = subtitle_file.replace(".txt", "")
             segment_images = []
+            segment_videos = []
             for f in files:
                 m = re.match(rf"^{segment_id}_\d+\.jpg$", f)
-                if m is None:
-                    continue
-                segment_images.append(m.string)
+                if m is not None:
+                    segment_images.append(m.string)
+
+                m = re.match(rf"^{segment_id}_\d+_.*\.mp4$", f)
+                if m is not None:
+                    segment_videos.append(m.string)
+
             if not segment_images:
                 continue
-            random_image_file = random.choice(segment_images)
+
+            random_image_file = f"/{path}/{random.choice(segment_images)}" if segment_images else ""
+            random_video_file = f"/{path}/{random.choice(segment_videos)}" if segment_videos else ""
+
             with open(f"{path}/{subtitle_file}", "r", encoding="utf-8") as f:
                 segment = {
                     "id": segment_id,
-                    "image": f"/{path}/{random_image_file}",
+                    "image": random_image_file,
+                    "video": random_video_file,
                     "subtitle": f.read()
                 }
                 segments.append(segment)
