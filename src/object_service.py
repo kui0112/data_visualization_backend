@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import re
@@ -54,9 +55,9 @@ class ObjectService:
             return self.knowledge_graph_service.get_graph_data(name, file)
         return None
 
-    def get_image_urls(self, name: str):
+    def get_knowledge_image_urls(self, name: str):
         object_path = random.choice(self.object_paths[name])
-        path = f"{object_path}/images"
+        path = f"{object_path}/images_square"
         if not object_path or not os.path.exists(path) or not os.path.isdir(path):
             logger.error(f"directory not found: {path}.")
             return []
@@ -70,9 +71,7 @@ class ObjectService:
                 urls.append(f"/{url}")
         return urls
 
-    def get_images_and_subtitles(self, name: str):
-        object_path = random.choice(self.object_paths[name])
-        print(object_path)
+    def _get_images_and_subtitles(self, object_path: str):
         path = f"{object_path}/images"
         files = os.listdir(path)
         subtitle_files: List[str] = list(filter(lambda x: re.match(r"\d+\.txt", x), files))
@@ -81,30 +80,37 @@ class ObjectService:
         for subtitle_file in subtitle_files:
             segment_id = subtitle_file.replace(".txt", "")
             segment_images = []
-            segment_videos = []
             for f in files:
                 m = re.match(rf"^{segment_id}_\d+\.jpg$", f)
                 if m is not None:
                     segment_images.append(m.string)
-
-                m = re.match(rf"^{segment_id}_\d+_.*\.mp4$", f)
-                if m is not None:
-                    segment_videos.append(m.string)
-
             if not segment_images:
                 continue
 
             random_image_file = f"/{path}/{random.choice(segment_images)}" if segment_images else ""
-            random_video_file = f"/{path}/{random.choice(segment_videos)}" if segment_videos else ""
 
             with open(f"{path}/{subtitle_file}", "r", encoding="utf-8") as f:
                 segment = {
                     "id": segment_id,
                     "image": random_image_file,
-                    "video": random_video_file,
                     "subtitle": f.read()
                 }
                 segments.append(segment)
+        return segments
+
+    def get_images_and_subtitles(self, name: str):
+        paths = self.object_paths[name][:]
+        if not paths:
+            return []
+        # 打乱顺序
+        random.shuffle(paths)
+        segments = []
+        for i, obj_path in enumerate(paths):
+            current_segments = self._get_images_and_subtitles(obj_path)
+            for seg in current_segments:
+                seg["id"] = f"{i}{seg['id']}"
+            segments.extend(current_segments)
+        print(json.dumps(segments))
         return segments
 
     def get_vectors(self, name: str):

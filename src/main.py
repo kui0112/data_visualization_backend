@@ -98,7 +98,7 @@ def knowledge_graph(object_name: str):
     # 知识图谱
     data = service.get_knowledge_graph_data(object_name)
     # 知识图谱图片
-    images = service.get_image_urls(object_name)
+    images = service.get_knowledge_image_urls(object_name)
     return Res.message({"name": object_name, "data": data, "images": images})
 
 
