@@ -12,7 +12,7 @@ from object_service import ObjectService
 from connection_manager import ConnectionManager, Connection
 from log import logger_factory
 from config import Config
-from utils import Res
+from utils import Res, ConcurrentDict
 
 logger = logger_factory.get_logger(__name__)
 
@@ -20,9 +20,10 @@ service = ObjectService("static/objects")
 manager = ConnectionManager()
 
 cfg = Config()
-store = {
-    "current_object_name": "显卡"
-}
+CURRENT = "current_object_name"
+store = ConcurrentDict({
+    "current_object_name": ""
+})
 
 app = FastAPI()
 
@@ -69,18 +70,19 @@ async def object_names():
 
 @app.get("/update_display")
 async def update_display(object_name: str):
-    if object_name not in service.get_object_names():
+    if object_name and object_name not in service.get_object_names():
         logger.warning("unknown object name.")
         return Res.message("unknown object name")
-    print("update_display")
-    store["current_object_name"] = object_name
-    await manager.publish(json.dumps(Res.update(name=object_name)))
+
+    logger.info(f"update_display: {object_name}")
+    store.set(CURRENT, object_name)
+    await manager.publish(json.dumps({"name": object_name}))
     return Res.message("success")
 
 
 @app.get("/current_object_name")
 def current_object_name():
-    return Res.message(store.get("current_object_name"))
+    return Res.message(store.get(CURRENT))
 
 
 @app.get("/vectors")
@@ -108,7 +110,7 @@ async def websocket_endpoint(ws: WebSocket):
     await manager.connect(conn)
     while conn.active:
         try:
-            await conn.send(json.dumps(Res.heartbeat()))
+            await conn.send(json.dumps({"name": store.get(CURRENT)}))
             await conn.receive()
             await asyncio.sleep(1)
         except Exception as ex:

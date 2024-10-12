@@ -80,19 +80,26 @@ class ObjectService:
         for subtitle_file in subtitle_files:
             segment_id = subtitle_file.replace(".txt", "")
             segment_images = []
+            segment_videos = []
             for f in files:
                 m = re.match(rf"^{segment_id}_\d+\.jpg$", f)
                 if m is not None:
                     segment_images.append(m.string)
+                m = re.match(rf"^{segment_id}_.*\.mp4$", f)
+                if m is not None:
+                    segment_videos.append(m.string)
+
             if not segment_images:
                 continue
 
             random_image_file = f"/{path}/{random.choice(segment_images)}" if segment_images else ""
+            random_video_file = f"/{path}/{random.choice(segment_videos)}" if segment_videos else ""
 
             with open(f"{path}/{subtitle_file}", "r", encoding="utf-8") as f:
                 segment = {
                     "id": segment_id,
                     "image": random_image_file,
+                    "video": random_video_file,
                     "subtitle": f.read()
                 }
                 segments.append(segment)

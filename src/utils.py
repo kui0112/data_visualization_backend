@@ -1,5 +1,5 @@
-import json
-from typing import Any
+import threading
+from typing import Any, Dict
 
 
 class Res:
@@ -11,14 +11,16 @@ class Res:
     def message(cls, msg: Any):
         return Res.res("message", content=msg)
 
-    @classmethod
-    def command(cls, operation: str, **args):
-        return Res.res("command", operation=operation, **args)
 
-    @classmethod
-    def update(cls, **kwargs):
-        return cls.command("update", **kwargs)
+class ConcurrentDict:
+    def __init__(self, init_values: Dict):
+        self.lock = threading.Lock()
+        self.store = init_values
 
-    @classmethod
-    def heartbeat(cls):
-        return cls.res("heartbeat")
+    def get(self, key: str):
+        with self.lock:
+            return self.store.get(key)
+
+    def set(self, key: str, value: Any):
+        with self.lock:
+            self.store[key] = value

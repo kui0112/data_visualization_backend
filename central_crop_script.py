@@ -33,7 +33,7 @@ def main():
             output_path = os.path.join(output_dir, file)
             with Image.open(image_path) as img:
                 width, height = img.size
-                new_size = min(width, height)
+                new_size = min(width, height, 256)
                 new_width = new_height = new_size
 
                 left = (width - new_width) / 2
