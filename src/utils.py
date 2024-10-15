@@ -1,5 +1,7 @@
-import threading
-from typing import Any, Dict
+import asyncio
+from typing import Any, Dict, List
+
+from starlette.websockets import WebSocket
 
 
 class Res:
@@ -12,15 +14,21 @@ class Res:
         return Res.res("message", content=msg)
 
 
-class ConcurrentDict:
-    def __init__(self, init_values: Dict):
-        self.lock = threading.Lock()
-        self.store = init_values
+class WebSocketsManager:
+    def __init__(self):
+        self.lock = asyncio.Lock()
+        self.store: List[WebSocket] = []
 
-    def get(self, key: str):
-        with self.lock:
-            return self.store.get(key)
+    async def add(self, ws: WebSocket):
+        async with self.lock:
+            self.store.append(ws)
 
-    def set(self, key: str, value: Any):
-        with self.lock:
-            self.store[key] = value
+    async def remove(self, ws: WebSocket):
+        async with self.lock:
+            self.store.remove(ws)
+
+    async def publish(self, msg: str):
+        async with self.lock:
+            # 遍历列表的过程中使用await，需要加锁，加协程锁
+            for ws in self.store:
+                await ws.send_text(msg)

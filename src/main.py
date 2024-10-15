@@ -1,5 +1,4 @@
 import asyncio
-import json
 
 import click
 from fastapi import FastAPI, WebSocket, Request
@@ -9,21 +8,17 @@ from fastapi.responses import HTMLResponse, FileResponse
 import uvicorn
 
 from object_service import ObjectService
-from connection_manager import ConnectionManager, Connection
 from log import logger_factory
 from config import Config
-from utils import Res, ConcurrentDict
+from utils import Res, WebSocketsManager
 
 logger = logger_factory.get_logger(__name__)
 
 service = ObjectService("static/objects")
-manager = ConnectionManager()
 
 cfg = Config()
-CURRENT = "current_object_name"
-store = ConcurrentDict({
-    "current_object_name": ""
-})
+CURRENT = ""
+manager = WebSocketsManager()
 
 app = FastAPI()
 
@@ -75,14 +70,15 @@ async def update_display(object_name: str):
         return Res.message("unknown object name")
 
     logger.info(f"update_display: {object_name}")
-    store.set(CURRENT, object_name)
-    await manager.publish(json.dumps({"name": object_name}))
+    global CURRENT
+    CURRENT = object_name
+    await manager.publish(object_name)
     return Res.message("success")
 
 
 @app.get("/current_object_name")
-def current_object_name():
-    return Res.message(store.get(CURRENT))
+async def current_object_name():
+    return Res.message(CURRENT)
 
 
 @app.get("/vectors")
@@ -106,16 +102,16 @@ def knowledge_graph(object_name: str):
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
-    conn = Connection(ws)
-    await manager.connect(conn)
-    while conn.active:
-        try:
-            await conn.send(json.dumps({"name": store.get(CURRENT)}))
-            await conn.receive()
+    await ws.accept()
+    await manager.add(ws)
+    try:
+        while True:
+            await ws.send_text(CURRENT)
+            await ws.receive()
             await asyncio.sleep(1)
-        except Exception as ex:
-            logger.debug(ex)
-            await manager.disconnect(conn)
+    except Exception as ex:
+        await manager.remove(ws)
+        logger.debug(ex)
 
 
 @click.command()
