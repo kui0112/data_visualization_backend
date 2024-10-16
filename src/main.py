@@ -66,7 +66,11 @@ async def object_names():
 
 @app.get("/update_display")
 async def update_display(object_name: str, prob: float):
-    if (not object_name or object_name not in service.get_object_names()) and object_name != "nothing":
+    if not object_name:
+        logger.warning("object_name can not be blank.")
+        return Res.message("object_name can not be blank.")
+    
+    if object_name != "nothing" and object_name not in service.get_object_names():
         logger.warning("unknown object name.")
         return Res.message("unknown object name")
 
