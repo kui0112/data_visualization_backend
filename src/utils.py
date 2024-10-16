@@ -3,6 +3,10 @@ from typing import Any, Dict, List
 
 from starlette.websockets import WebSocket
 
+from log import logger_factory
+
+logger = logger_factory.get_logger(__name__)
+
 
 class Res:
     @classmethod
@@ -25,10 +29,15 @@ class WebSocketsManager:
 
     async def remove(self, ws: WebSocket):
         async with self.lock:
-            self.store.remove(ws)
+            if ws in self.store:
+                self.store.remove(ws)
 
     async def publish(self, msg: str):
         async with self.lock:
             # 遍历列表的过程中使用await，需要加锁，加协程锁
             for ws in self.store:
-                await ws.send_text(msg)
+                try:
+                    await ws.send_text(msg)
+                except Exception as ex:
+                    self.store.remove(ws)
+                    logger.debug(ex)

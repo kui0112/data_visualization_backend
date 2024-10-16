@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import click
 from fastapi import FastAPI, WebSocket, Request
@@ -17,7 +18,7 @@ logger = logger_factory.get_logger(__name__)
 service = ObjectService("static/objects")
 
 cfg = Config()
-CURRENT = ""
+CURRENT = "nothing"
 manager = WebSocketsManager()
 
 app = FastAPI()
@@ -64,15 +65,15 @@ async def object_names():
 
 
 @app.get("/update_display")
-async def update_display(object_name: str):
-    if object_name and object_name not in service.get_object_names():
+async def update_display(object_name: str, prob: float):
+    if (not object_name or object_name not in service.get_object_names()) and object_name != "nothing":
         logger.warning("unknown object name.")
         return Res.message("unknown object name")
 
     logger.info(f"update_display: {object_name}")
     global CURRENT
     CURRENT = object_name
-    await manager.publish(object_name)
+    await manager.publish(json.dumps({"object_name": object_name, "prob": prob}, ensure_ascii=False))
     return Res.message("success")
 
 
@@ -106,7 +107,7 @@ async def websocket_endpoint(ws: WebSocket):
     await manager.add(ws)
     try:
         while True:
-            await ws.send_text(CURRENT)
+            await ws.send_text(json.dumps({"object_name": CURRENT}, ensure_ascii=False))
             await ws.receive()
             await asyncio.sleep(1)
     except Exception as ex:
