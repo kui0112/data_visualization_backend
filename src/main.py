@@ -20,6 +20,7 @@ service = ObjectService("static/objects")
 
 cfg = Config()
 CURRENT = "nothing"
+CURRENT_PROB = 0
 manager = WebSocketsManager()
 
 app = FastAPI()
@@ -78,6 +79,7 @@ async def update_display(object_name: str, prob: float):
     logger.info(f"update_display: {object_name}")
     global CURRENT, CURRENT_PROB
     CURRENT = object_name
+    CURRENT_PROB = prob
     await manager.publish(json.dumps({"object_name": object_name, "prob": prob}, ensure_ascii=False))
     return Res.message("success")
 
@@ -112,7 +114,7 @@ async def websocket_endpoint(ws: WebSocket):
     await manager.add(ws)
     try:
         while True:
-            await ws.send_text(json.dumps({"object_name": CURRENT}, ensure_ascii=False))
+            await ws.send_text(json.dumps({"object_name": CURRENT, "prob": CURRENT_PROB}, ensure_ascii=False))
             await ws.receive()
             await asyncio.sleep(1.0 + random.random() * 0.5)
     except Exception as ex:
