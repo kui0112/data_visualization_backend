@@ -1,5 +1,6 @@
 import asyncio
 import json
+import random
 
 import click
 from fastapi import FastAPI, WebSocket, Request
@@ -69,13 +70,13 @@ async def update_display(object_name: str, prob: float):
     if not object_name:
         logger.warning("object_name can not be blank.")
         return Res.message("object_name can not be blank.")
-    
+
     if object_name != "nothing" and object_name not in service.get_object_names():
         logger.warning("unknown object name.")
         return Res.message("unknown object name")
 
     logger.info(f"update_display: {object_name}")
-    global CURRENT
+    global CURRENT, CURRENT_PROB
     CURRENT = object_name
     await manager.publish(json.dumps({"object_name": object_name, "prob": prob}, ensure_ascii=False))
     return Res.message("success")
@@ -113,7 +114,7 @@ async def websocket_endpoint(ws: WebSocket):
         while True:
             await ws.send_text(json.dumps({"object_name": CURRENT}, ensure_ascii=False))
             await ws.receive()
-            await asyncio.sleep(1)
+            await asyncio.sleep(1.0 + random.random() * 0.5)
     except Exception as ex:
         await manager.remove(ws)
         logger.debug(ex)

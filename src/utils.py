@@ -30,7 +30,13 @@ class WebSocketsManager:
     async def remove(self, ws: WebSocket):
         async with self.lock:
             if ws in self.store:
+                logger.debug("remove, remove ws.")
                 self.store.remove(ws)
+            try:
+                logger.debug("remove, close ws.")
+                await ws.close()
+            except Exception as ex:
+                logger.debug(ex)
 
     async def publish(self, msg: str):
         async with self.lock:
@@ -39,5 +45,13 @@ class WebSocketsManager:
                 try:
                     await ws.send_text(msg)
                 except Exception as ex:
-                    self.store.remove(ws)
                     logger.debug(ex)
+                    if ws in self.store:
+                        logger.debug("publish, remove ws.")
+                        self.store.remove(ws)
+
+                    try:
+                        await ws.close()
+                        logger.debug("publish, close ws.")
+                    except Exception as ex:
+                        logger.debug(ex)
