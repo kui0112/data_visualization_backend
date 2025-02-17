@@ -108,6 +108,12 @@ def knowledge_graph(object_name: str):
     return Res.message({"name": object_name, "data": data, "images": images})
 
 
+@app.get("/knowledge_graph_ex")
+def knowledge_graph_ex(object_name: str):
+    # 知识图谱, all in one
+    return Res.message({"name": object_name, "data": service.get_knowledge_graph_data_ex(object_name)})
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
