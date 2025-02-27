@@ -47,7 +47,7 @@ class WebSocketsManager:
                 except Exception as ex:
                     logger.debug(ex)
                     if ws in self.store:
-                        logger.debug("publish, remove ws.")
+                        logger.debug(f"publish failed, remove ws {ws}.")
                         self.store.remove(ws)
 
                     try:

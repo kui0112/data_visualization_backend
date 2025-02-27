@@ -209,11 +209,15 @@ class ObjectService:
         paths = self.object_paths[name][:]
         if not paths:
             return []
-        # 随机播放一组
-        obj_path = random.choice(paths)
-        res = self._get_images_and_subtitles(obj_path)
-        print(json.dumps(res))
-        return res
+        # 全部按顺序播放
+        segments = []
+        for i, obj_path in enumerate(paths):
+            current_segments = self._get_images_and_subtitles(obj_path)
+            for seg in current_segments:
+                seg["id"] = f"{i}{seg['id']}"
+            segments.extend(current_segments)
+        print(json.dumps(segments))
+        return segments
 
     def get_vectors(self, name: str):
         object_path = random.choice(self.object_paths[name])
